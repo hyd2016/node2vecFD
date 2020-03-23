@@ -9,10 +9,11 @@ import time
 
 
 class LinkPrediction:
-    def __init__(self, graph_train, graph_test, model):
+    def __init__(self, graph_train, graph_test, model, alpha):
         self.graph_train = graph_train
         self.graph_test = graph_test
         self.model = model
+        self.alpha = alpha
 
     def data_label(self, graph):
         """
@@ -21,18 +22,23 @@ class LinkPrediction:
         :return:
         """
         model = self.model
+        alpha = self.alpha
         label = []
         features = []
         size_nodes = len(graph.nodes())
         # 遍历图的所有可能的边
         for i in range(size_nodes):
             for j in range(i + 1, size_nodes):
-                feature = model[str(graph.nodes()[i])] * model[str(graph.nodes()[j])]
+                feature = np.zeros(128)
+                lm = len(model)
+                for index, m in enumerate(model):
+                    f = m[str(graph.nodes()[i])] * m[str(graph.nodes()[j])]
+                    feature = alpha ** (lm - index) * f + feature
                 if graph.has_edge(i, j):
                     label.append(1)
                 else:
                     label.append(0)
-                features.append(feature)
+                features.append(feature.tolist())
         return features, label
 
     def predict(self):
@@ -45,12 +51,11 @@ class LinkPrediction:
         train_feature, train_label = self.data_label(self.graph_train)
         train_feature = np.array(train_feature)
         # te = max(train_feature)
-        tt = np.max(train_feature)
-        train_feature = train_feature/np.max(train_feature)
+        # train_feature = train_feature / np.max(train_feature)
         svm_rbf.fit(train_feature, train_label)
         true_features, true_label = self.data_label(self.graph_test)
         true_features = np.array(true_features)
-        true_features = true_features/np.max(true_features)
+        # true_features = true_features / np.max(true_features)
         predict_probability = svm_rbf.predict(true_features)
         # predict_probability = svm_rbf.predict_proba(true_features)[:, 1]
         # fpr, tpr, thresholds = metrics.roc_curve(true_label, predict_probability, pos_label=1)
@@ -58,4 +63,3 @@ class LinkPrediction:
         # plt.show()
         auc_score = roc_auc_score(true_label, predict_probability)
         print auc_score
-

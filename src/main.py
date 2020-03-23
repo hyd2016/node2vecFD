@@ -134,12 +134,18 @@ def main(args):
         graphs, graph, graph_test = read_enron_graph()
     else:
         graphs, graph, graph_test = read_graph(20)
-    print "读图时间", time.time()
-    G = node2vec.Graph(graphs, graph, 0.8, args.directed, args.p, args.q)
-    G.preprocess_transition_probs(temporary)
-    walks = G.simulate_walks(args.num_walks, args.walk_length)
-    model = learn_embeddings(walks)
-    predict = linkprediction.LinkPrediction(graph, graph_test, model)
+    print
+    "读图时间", time.time()
+    # 用来存储生成的随机游走模型
+    model_list = []
+    for g in graphs:
+        G = node2vec.Graph(g, args.directed, args.p, args.q)
+        G.preprocess_transition_probs()
+        walks = G.simulate_walks(args.num_walks, args.walk_length)
+        model = learn_embeddings(walks)
+        model_list.append(model)
+
+    predict = linkprediction.LinkPrediction(graph, graph_test, model_list, 0.8 )
     predict.predict()
 
 
